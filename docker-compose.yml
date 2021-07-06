@@ -24,6 +24,10 @@ services:
     networks:
       - backend-network
       - frontend-network
+    privileged: true
+    devices:
+      - '/dev:/dev'
+      #- "/dev/snd/by-id/usb-GDprofessional_Audio_MADE_GDprofessional_Audio_20180508-00"
   web:
     build: web
     restart: always
@@ -31,6 +35,7 @@ services:
       - ./web/src:/usr/share/nginx/html/
     ports:
       - 80:80
+      - 443:443
     networks:
       - frontend-network
 volumes:
