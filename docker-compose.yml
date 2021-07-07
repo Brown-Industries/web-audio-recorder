@@ -8,6 +8,8 @@ services:
       - db-password
     volumes:
       - db-data:/var/lib/mysql
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
     networks:
       - backend-network
     environment:
@@ -20,6 +22,8 @@ services:
     volumes:
       - ./app/src:/src
       - ~/recordings:/recordings
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
     secrets:
       - db-password
     networks:
@@ -34,6 +38,8 @@ services:
     restart: always
     volumes:
       - ./web/src:/usr/share/nginx/html/
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
     ports:
       - 80:80
       - 443:443

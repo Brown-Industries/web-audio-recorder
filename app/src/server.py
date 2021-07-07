@@ -4,10 +4,12 @@ import sys
 import tempfile
 import threading
 import json
+import time
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
+from datetime import datetime
 from time import sleep
 
 from flask import Flask
@@ -17,9 +19,13 @@ server = Flask(__name__)
 app = None
 
 class Status:
-    HTTPStatus = None
+    HTTPStatus = 0
     isRecording = False
-    timeStarted = None
+    timeStarted = 0
+    def __init__(self):
+        self.HTTPStatus = None
+        self.isRecording = False
+        self.timeStarted = None
 
 status = Status()
 
@@ -34,16 +40,17 @@ def startRecording():
     if app is None:
           app = RecGui()
     app.on_rec()
-    global status
+
     status.HTTPStatus = 200
     status.isRecording = True
+    status.timeStarted = int(time.time())
     return json.dumps(status.__dict__)
 
 @server.route("/stopRecording")
 def stopRecording():
     print('/stopRecording called.')
     app.on_stop()
-    global status
+    
     status.HTTPStatus = 200
     status.isRecording = False
     return json.dumps(status.__dict__)
@@ -51,8 +58,6 @@ def stopRecording():
 @server.route("/status")
 def getStatus():
     print('/getStatus called.')
-    global status
-    status.HTTPStatus = 200
     jsonStr = json.dumps(status.__dict__)
     return jsonStr
 
@@ -120,8 +125,11 @@ class RecGui():
         print('/startRecording class method called.')
         self.recording = True
 
-        filename = tempfile.mktemp(
-            prefix='delme_rec_gui_', suffix='.wav', dir='../recordings')
+        now = datetime.now()
+
+        filename = open("../recordings/rec_" + now.strftime("%m%d%Y_%H%M%S" + ".wav"), 'wb')
+        #filename = tempfile.mktemp(
+        #    prefix='delme_rec_gui_', suffix='.wav', dir='../recordings')
 
         if self.audio_q.qsize() != 0:
             print('WARNING: Queue not empty!')

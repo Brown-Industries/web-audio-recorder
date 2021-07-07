@@ -13,10 +13,19 @@ var recordButton = document.getElementById("recordButton");
 var stopButton = document.getElementById("stopButton");
 var statusButton = document.getElementById("statusButton");
 
+var duration = document.getElementById("duration");
+
+var serverStatus = {HTTPStatus:null, isRecording:false, timeStarted:null};
+
 //add events to those 2 buttons
 recordButton.addEventListener("click", startRecording);
 stopButton.addEventListener("click", stopRecording);
 statusButton.addEventListener("click", getStatus);
+
+
+var intervalId = window.setInterval(function(){
+	getStatus()
+  }, 1000);
 
 function startRecording() {
 	console.log("recordButton clicked");
@@ -24,7 +33,7 @@ function startRecording() {
 	stopButton.disabled = false;
 	recordButton.disabled = true;
 }
-
+var jsonResponse;
 function queryServer(endpoint) {
 	const Http = new XMLHttpRequest();
 	Http.responseType = 'json';
@@ -35,14 +44,29 @@ function queryServer(endpoint) {
 	Http.send();
 
 	Http.onreadystatechange = (e) => {
-		//document.getElementById('response').innerHTML = Http.responseText;
-		document.getElementById('status').innerHTML = Http.response
+		jsonResponse = Http.response;
+		serverStatus.HTTPStatus = Http.response.HTTPStatus;
+		serverStatus.isRecording = Http.response.isRecording;
+		serverStatus.timeStarted = Http.response.timeStarted;
 	}
 }
 
 function getStatus(){
-	console.log("statusButton clicked");
 	queryServer("status");
+
+	if(serverStatus.isRecording){
+		stopButton.disabled = false;
+		recordButton.disabled = true;
+
+		var startTime = new Date(0); // The 0 there is the key, which sets the date to the epoch
+		startTime.setUTCSeconds(serverStatus.timeStarted);
+
+		var timePassed = Date.now() - startTime;
+		
+		duration.innerText = Math.floor(timePassed/1000) + " seconds";
+	}else{
+	duration.innerText = "";
+	}
 }
 
 function stopRecording() {

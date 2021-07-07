@@ -115,6 +115,12 @@ li {
 #recordingsList{
 	max-width: 28em;
 }
+
+#duration {
+  display: flex;
+  margin-top: 2rem;
+  max-width: 28em;
+} 
   </style>
   </head>
   <body>
@@ -124,6 +130,8 @@ li {
   	 <button id="stopButton" disabled>Stop</button>
      <button id="statusButton">Status</button>
     </div>
+    <div id="duration"></div>
+    <!--
     <h3>Server response</h3>
         <div id="response">
         <div id="status">
@@ -132,6 +140,7 @@ li {
     <div id="formats">Format: start recording to see sample rate</div>
   	<p><strong>Recordings:</strong></p>
   	<ol id="recordingsList"></ol>
+    -->
     <!-- inserting these scripts at the end to be able to use all the elements in the DOM -->
   	<script src="js/app.js"></script>
   </body>
