@@ -19,6 +19,7 @@ services:
     restart: always
     volumes:
       - ./app/src:/src
+      - ~/recordings:/recordings
     secrets:
       - db-password
     networks:

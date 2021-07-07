@@ -3,6 +3,7 @@ import queue
 import sys
 import tempfile
 import threading
+import json
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
@@ -10,8 +11,17 @@ import soundfile as sf
 from time import sleep
 
 from flask import Flask
+from flask import jsonify
+
 server = Flask(__name__)
 app = None
+
+class Status:
+    HTTPStatus = None
+    isRecording = False
+    timeStarted = None
+
+status = Status()
 
 @server.route("/")
 def hello():
@@ -24,13 +34,27 @@ def startRecording():
     if app is None:
           app = RecGui()
     app.on_rec()
-    return "200"
+    global status
+    status.HTTPStatus = 200
+    status.isRecording = True
+    return json.dumps(status.__dict__)
 
 @server.route("/stopRecording")
 def stopRecording():
     print('/stopRecording called.')
     app.on_stop()
-    return "200"
+    global status
+    status.HTTPStatus = 200
+    status.isRecording = False
+    return json.dumps(status.__dict__)
+
+@server.route("/status")
+def getStatus():
+    print('/getStatus called.')
+    global status
+    status.HTTPStatus = 200
+    jsonStr = json.dumps(status.__dict__)
+    return jsonStr
 
 def file_writing_thread(*, q, **soundfile_args):
     """Write data from queue to file until *None* is received."""
@@ -97,7 +121,7 @@ class RecGui():
         self.recording = True
 
         filename = tempfile.mktemp(
-            prefix='delme_rec_gui_', suffix='.wav', dir='')
+            prefix='delme_rec_gui_', suffix='.wav', dir='../recordings')
 
         if self.audio_q.qsize() != 0:
             print('WARNING: Queue not empty!')
@@ -134,5 +158,4 @@ class RecGui():
 
 if __name__ == "__main__":
     print('STARTUP: STARTING WEB SERVER!')
-    #app = RecGui()
     server.run(debug=True, host='0.0.0.0')

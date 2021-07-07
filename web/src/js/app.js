@@ -11,20 +11,23 @@ var audioContext //audio context to help us record
 
 var recordButton = document.getElementById("recordButton");
 var stopButton = document.getElementById("stopButton");
-var pauseButton = document.getElementById("pauseButton");
+var statusButton = document.getElementById("statusButton");
 
 //add events to those 2 buttons
 recordButton.addEventListener("click", startRecording);
 stopButton.addEventListener("click", stopRecording);
-pauseButton.addEventListener("click", pauseRecording);
+statusButton.addEventListener("click", getStatus);
 
 function startRecording() {
 	console.log("recordButton clicked");
 	queryServer("startRecording");
+	stopButton.disabled = false;
+	recordButton.disabled = true;
 }
 
 function queryServer(endpoint) {
 	const Http = new XMLHttpRequest();
+	Http.responseType = 'json';
 	const path = endpoint;
 	const url = "/api/";
 	Http.open("GET", url + path);
@@ -32,13 +35,14 @@ function queryServer(endpoint) {
 	Http.send();
 
 	Http.onreadystatechange = (e) => {
-		document.getElementById('response').innerHTML = Http.responseText;
+		//document.getElementById('response').innerHTML = Http.responseText;
+		document.getElementById('status').innerHTML = Http.response
 	}
 }
 
-function pauseRecording(){
-	console.log("pauseButton clicked");
-	queryServer("");
+function getStatus(){
+	console.log("statusButton clicked");
+	queryServer("status");
 }
 
 function stopRecording() {
@@ -47,10 +51,6 @@ function stopRecording() {
 	//disable the stop button, enable the record too allow for new recordings
 	stopButton.disabled = true;
 	recordButton.disabled = false;
-	pauseButton.disabled = true;
-
-	//reset button just in case the recording is stopped while paused
-	pauseButton.innerHTML="Pause";
 
 	queryServer("stopRecording");
 	
