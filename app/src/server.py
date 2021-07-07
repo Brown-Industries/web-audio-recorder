@@ -1,7 +1,17 @@
-import pyaudio
-import wave
+import contextlib
+import queue
+import sys
+import tempfile
+import threading
+import numpy as np
+import sounddevice as sd
+import soundfile as sf
+
+from time import sleep
+
 from flask import Flask
 server = Flask(__name__)
+app = None
 
 @server.route("/")
 def hello():
@@ -9,53 +19,120 @@ def hello():
 
 @server.route("/startRecording")
 def startRecording():
-    # Record in chunks of 1024 samples
-    chunk = 2048 
-    
-    # 16 bits per sample
-    sample_format = pyaudio.paInt16 
-    chanels = 1
-    
-    # Record at 44100 samples per second
-    smpl_rt = 44100
-    seconds = 2
-    filename = "/src/recordingtest.wav"
-    
-    # Create an interface to PortAudio
-    pa = pyaudio.PyAudio()
-    
-    stream = pa.open(format=sample_format, channels=chanels,
-                    rate=smpl_rt, input=True,
-                    frames_per_buffer=chunk)
-    
-    print('Recording...')
-    
-    # Initialize array to be used for storing frames
-    frames = [] 
-    
-    # Store data in chunks for 8 seconds
-    for i in range(0, int(smpl_rt / chunk * seconds)):
-        data = stream.read(chunk, exception_on_overflow = False)
-        frames.append(data)
-    
-    # Stop and close the stream
-    stream.stop_stream()
-    stream.close()
-    
-    # Terminate - PortAudio interface
-    pa.terminate()
-    
-    print('Done !!! ')
-    
-    # Save the recorded data in a .wav format
-    sf = wave.open(filename, 'wb')
-    sf.setnchannels(chanels)
-    sf.setsampwidth(pa.get_sample_size(sample_format))
-    sf.setframerate(smpl_rt)
-    sf.writeframes(b''.join(frames))
-    sf.close()
-    return "CallComplete"
+    print('/startRecording called.')
+    global app
+    if app is None:
+          app = RecGui()
+    app.on_rec()
+    return "200"
 
+@server.route("/stopRecording")
+def stopRecording():
+    print('/stopRecording called.')
+    app.on_stop()
+    return "200"
+
+def file_writing_thread(*, q, **soundfile_args):
+    """Write data from queue to file until *None* is received."""
+    # NB: If you want fine-grained control about the buffering of the file, you
+    #     can use Python's open() function (with the "buffering" argument) and
+    #     pass the resulting file object to sf.SoundFile().
+    with sf.SoundFile(**soundfile_args) as f:
+        while True:
+            data = q.get()
+            if data is None:
+                break
+            f.write(data)
+class RecGui():
+
+    stream = None
+    
+    def __init__(self):
+        # We try to open a stream with default settings first, if that doesn't
+        # work, the user can manually change the device(s)
+        self.create_stream()
+
+        self.recording = self.previously_recording = False
+        self.audio_q = queue.Queue()
+        self.peak = 0
+        self.metering_q = queue.Queue(maxsize=1)
+
+        
+    def create_stream(self, device=None):
+        if self.stream is not None:
+            self.stream.close()
+        print("checking input settings for device 1")
+        sd.check_input_settings(device=1, channels=1, samplerate=44100)
+        self.stream = sd.InputStream(device=1, channels=1, samplerate=44100, callback=self.audio_callback)
+        print("done create")
+        self.stream.start()
+
+    def audio_callback(self, indata, frames, time, status):
+        """This is called (from a separate thread) for each audio block."""
+        if status.input_overflow:
+            # NB: This increment operation is not atomic, but this doesn't
+            #     matter since no other thread is writing to the attribute.
+            self.input_overflows += 1
+        # NB: self.recording is accessed from different threads.
+        #     This is safe because here we are only accessing it once (with a
+        #     single bytecode instruction).
+        if self.recording:
+            self.audio_q.put(indata.copy())
+            self.previously_recording = True
+        else:
+            if self.previously_recording:
+                self.audio_q.put(None)
+                self.previously_recording = False
+
+        self.peak = max(self.peak, np.max(np.abs(indata)))
+        try:
+            self.metering_q.put_nowait(self.peak)
+        except queue.Full:
+            pass
+        else:
+            self.peak = 0
+
+    def on_rec(self):
+        print('/startRecording class method called.')
+        self.recording = True
+
+        filename = tempfile.mktemp(
+            prefix='delme_rec_gui_', suffix='.wav', dir='')
+
+        if self.audio_q.qsize() != 0:
+            print('WARNING: Queue not empty!')
+        self.thread = threading.Thread(
+            target=file_writing_thread,
+            kwargs=dict(
+                file=filename,
+                mode='x',
+                samplerate=int(self.stream.samplerate),
+                channels=self.stream.channels,
+                q=self.audio_q,
+            ),
+        )
+        self.thread.start()
+
+    def on_stop(self, *args):
+        self.recording = False
+        self.wait_for_thread()
+
+    def wait_for_thread(self):
+        sleep(0.1)
+        self._wait_for_thread
+
+    def _wait_for_thread(self):
+        if self.thread.is_alive():
+            self.wait_for_thread()
+            return
+        self.thread.join()
+
+    def close_window(self):
+        if self.recording:
+            self.on_stop()
+        self.destroy()
 
 if __name__ == "__main__":
-   server.run(debug=True, host='0.0.0.0')
+    print('STARTUP: STARTING WEB SERVER!')
+    #app = RecGui()
+    server.run(debug=True, host='0.0.0.0')

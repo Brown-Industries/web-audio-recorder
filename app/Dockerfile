@@ -1,6 +1,6 @@
 FROM python:3.8-buster
 RUN apt-get install bash
-RUN apt-get update && apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0 pulseaudio alsa-utils ffmpeg -y
+RUN apt-get update && apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0 pulseaudio alsa-utils ffmpeg python3-tk libsndfile1 -y
 WORKDIR /src
 COPY requirements.txt .
 RUN pip install -r requirements.txt

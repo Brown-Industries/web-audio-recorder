@@ -1,5 +1,8 @@
 Flask==1.1.1
 mysql-connector==2.2.9
-pyaudio
+# pyaudio
+sounddevice
+numpy
+pysoundfile
 # debugging only
 # ptvsd==4.3.2

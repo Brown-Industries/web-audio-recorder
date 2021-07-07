@@ -20,12 +20,12 @@ pauseButton.addEventListener("click", pauseRecording);
 
 function startRecording() {
 	console.log("recordButton clicked");
-	queryServer();
+	queryServer("startRecording");
 }
 
-function queryServer() {
+function queryServer(endpoint) {
 	const Http = new XMLHttpRequest();
-	const path = "startRecording";
+	const path = endpoint;
 	const url = "/api/";
 	Http.open("GET", url + path);
 	console.log(url+path);
@@ -37,17 +37,8 @@ function queryServer() {
 }
 
 function pauseRecording(){
-	console.log("pauseButton clicked rec.recording=",rec.recording );
-	if (rec.recording){
-		//pause
-		rec.stop();
-		pauseButton.innerHTML="Resume";
-	}else{
-		//resume
-		rec.record()
-		pauseButton.innerHTML="Pause";
-
-	}
+	console.log("pauseButton clicked");
+	queryServer("");
 }
 
 function stopRecording() {
@@ -60,15 +51,11 @@ function stopRecording() {
 
 	//reset button just in case the recording is stopped while paused
 	pauseButton.innerHTML="Pause";
+
+	queryServer("stopRecording");
 	
-	//tell the recorder to stop the recording
-	rec.stop();
-
-	//stop microphone access
-	gumStream.getAudioTracks()[0].stop();
-
 	//create the wav blob and pass it on to createDownloadLink
-	rec.exportWAV(createDownloadLink);
+	//rec.exportWAV(createDownloadLink);
 }
 
 function createDownloadLink(blob) {
